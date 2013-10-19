@@ -1,0 +1,32 @@
+<html>
+<head>
+  <script src='http://cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js'></script>
+  <script src='http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.5.2/underscore-min.js'></script>
+  <script src='http://cdnjs.cloudflare.com/ajax/libs/backbone.js/1.0.0/backbone-min.js'></script>
+
+</head>
+<body>
+  <table>
+    <thead>Chatterbox</thead>
+    <tr>
+      <td>
+        <input type='text' placeholder='Say Something!' class='inputbox' />
+        <button type='submit' class='inputbutton'>Send Message</button>
+      </td>
+      <td>
+        <input type='text' placeholder='Lobby' class='roombox' />
+        <button type='submit' class='roombutton'>Change Rooms</button>
+      </td>
+    </tr>
+  </table>
+  <div class='chatbox'></div>
+  <script src="config.js"></script>
+  <script src = 'backbone-app.js'></script>
+  <script>
+    $(document).ready(function() {
+      var allMessages = new AllMessages();
+      var messageViewer = new MessageViewer({ el: $('.chatbox'), collection:allMessages});
+    });
+  </script>
+</body>
+</html>

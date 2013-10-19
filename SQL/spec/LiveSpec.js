@@ -10,9 +10,9 @@ describe("Persistent Node Chat Server", function() {
   beforeEach(function(done) {
     dbConnection = mysql.createConnection({
     /* TODO: Fill this out with your mysql username */
-      user: "",
+      user: "root",
     /* and password. */
-      password: "",
+      // password: "",
       database: "chat"
     });
     dbConnection.connect();
@@ -31,9 +31,9 @@ describe("Persistent Node Chat Server", function() {
   it("Should insert posted messages to the DB", function(done) {
     // Post a message to the node chat server:
     request({method: "POST",
-             uri: "http://127.0.0.1:8080/classes/room1",
+             uri: "http://127.0.0.1:8080/classes/messages",
              form: {username: "Valjean",
-                    message: "In mercy's name, three days is all I need."}
+                    text: "In mercy's name, three days is all I need."}
             },
             function(error, response, body) {
               /* Now if we look in the database, we should find the
@@ -50,7 +50,7 @@ describe("Persistent Node Chat Server", function() {
                   // Should have one result:
                   expect(results.length).toEqual(1);
                   expect(results[0].username).toEqual("Valjean");
-                  expect(results[0].message).toEqual("In mercy's name, three days is all I need.");
+                  expect(results[0].text).toEqual("In mercy's name, three days is all I need.");
                   /* TODO: You will need to change these tests if the
                    * column names in your schema are different from
                    * mine! */
@@ -72,11 +72,11 @@ describe("Persistent Node Chat Server", function() {
       function(err, results, fields) {
         /* Now query the Node chat server and see if it returns
          * the message we just inserted: */
-        request("http://127.0.0.1:8080/classes/room1",
+        request("http://127.0.0.1:8080/",
           function(error, response, body) {
             var messageLog = JSON.parse(body);
             expect(messageLog[0].username).toEqual("Javert");
-            expect(messageLog[0].message).toEqual("Men like you can never change!");
+            expect(messageLog[0].text).toEqual("Men like you can never change!");
             done();
           });
       });
