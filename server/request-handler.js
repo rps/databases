@@ -8,6 +8,12 @@ var fs = require("fs");
 var url = require('url');
 var mysql = require('mysql');
 var querystring = require('querystring');
+var express = require('express');
+var app = express();
+
+
+
+
 var log = []; //DELETE
 var defaultCorsHeaders = {
   "access-control-allow-origin": "*",
@@ -45,24 +51,38 @@ exports.handleRequest = function(request, response) {
   var routes = {
     '/': function(req){
       console.log('INDEX REQUESTED');
-      if(req.url === "/") {
-        fs.readFile(process.cwd() + '/client/chatterbox.html', 'utf8', function (err, html) {
-          response.writeHeader(200, {"Content-Type": "text/html"});
-          response.write(html);
-          response.end();
-        });
-      } else {
-        fs.readFile(process.cwd() + '/client' + req, 'binary', function (err, data) {
-          if(err) {
-            console.log("error on request");
-            routes['/404-Not-Found']();
-          } else {
-            response.writeHead(200, {"Content-Type": "text/plain"});
-            response.write(data, 'binary');
-            response.end();
-          }
-        });
-      }
+        if(req.url === "/") {
+          console.log('AUTH');
+          fs.readFile(process.cwd() + '/client/auth.html', 'utf8', function (err, html) {
+            response.writeHeader(200, {"Content-Type": "text/html"});
+            response.end(html);
+          });
+        } else if (req.url === 'verified'){
+          console.log('almost there');
+          fs.readFile(process.cwd() + '/client/chatterbox.html', 'utf8', function (err, html) {
+            response.writeHeader(200, {"Content-Type": "text/html"});
+            console.log('html',html);
+            console.log(process.cwd());
+            response.end(html);
+          });
+        } else {
+          fs.readFile(process.cwd() + '/client' + req, 'binary', function (err, data) {
+            if(err) {
+              console.log("error on request");
+              routes['/404-Not-Found']();
+            } else {
+              response.writeHead(200, {"Content-Type": "text/plain"});
+              response.write(data, 'binary');
+              response.end();
+            }
+          });
+        }
+      // else send to auth.html
+
+
+      // auth stuff
+
+
     },
     '/classes/messages': function(req, urlObj){
       // TO DO: include createdAt, updatedAt, roomname and objectId
@@ -79,7 +99,7 @@ exports.handleRequest = function(request, response) {
 
         req.on('data', function(chunk) {
           fullBody += chunk.toString();
-          console.log('receiving DAATAA')
+          console.log('receiving DAATAA');
         });
 
         req.on('end', function() {
@@ -88,8 +108,6 @@ exports.handleRequest = function(request, response) {
             response.end();
 
           } else {
-          console.log('fullbody',fullBody)
-
             var decodedBody = JSON.parse(fullBody);
 
             if(decodedBody.username && decodedBody.text) {
@@ -132,39 +150,43 @@ exports.handleRequest = function(request, response) {
         routes['/405-Method-Not-Supported']();
       }
     },
-    '/createUser': function(req){
+    '/login':function(req){
       var fullBody = '';
       req.on('data', function(chunk) {
         fullBody += chunk.toString();
+        console.log('receiving DAATAA');
       });
-
       req.on('end', function() {
         if(!fullBody){
           response.writeHead(404, headers);
           response.end();
         } else {
-          username = fullBody.slice(5);
-          console.log('USER:',username);
-          var x = connection.query("SELECT COUNT(username) FROM users WHERE username = ?",username, function(err, result){
+          console.log(fullBody);
+          var authObj = authParse(fullBody);
+          var username = authObj.username;
+          var password = authObj.password;
+          console.log('1',password);
+          connection.query("SELECT * FROM users WHERE username = ?",username, function(err, result){
             if(err){
               console.log('ERROR\n\n',err);
             }
-            console.log('RESULT\n\n',result);
-            if(result[0]['COUNT(username)'] === 0){
-              connection.query("INSERT INTO users SET ?",{username:username}, function(err, result){
+            console.log('2', 'USERNAME QUERY', result);
+            if(result.length === 0){
+              connection.query("INSERT INTO users SET ?",{username:username, password:password}, function(err, result){
                 if(err){
                   console.log(err);
-                }
-                else {
-                  console.log('ADDED to DB');
-                  response.writeHead(200,headers);
-                  response.end();
+                } else {
+                  console.log('ADDED USERNAME & PASSWORD to DB');
+                  routes['/']('verified');
                 }
               });
+            } else if (password === result[0]['password']){
+              console.log('SUCCESSFULLY LOGGED IN', result[0]['password']);
+                routes['/']({url:'verified'});
             } else {
-              response.writeHead(409,headers);
-              response.end();
-              console.log('Username Taken! Your lack of originality is depressing.');
+              console.log('wrong password');
+                  response.writeHead(302, {'Location': 'http://www.fbi.gov'});
+                  response.end();
             }
           });
         }
@@ -266,4 +288,11 @@ var parseUrl =  function(stringUrl) {
     urlObj.roomname = stringUrl.slice(stringUrl.indexOf("classes/") + 8);
   }
   return urlObj;
+};
+
+var authParse = function(string){
+  var authObj = {};
+  authObj.username = string.slice(string.indexOf('=')+1, string.indexOf('&'));
+  authObj.password = string.slice(string.lastIndexOf('=') + 1);
+  return authObj;
 };
